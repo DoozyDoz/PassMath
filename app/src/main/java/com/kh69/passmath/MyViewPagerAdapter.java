@@ -46,7 +46,7 @@ public class MyViewPagerAdapter extends PagerAdapter {
 
     @Override
     public int getCount() {
-        return mQuestions.size();
+        return 8;
     }
 
     @Override

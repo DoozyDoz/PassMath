@@ -33,6 +33,7 @@ class QuestionCards : AppCompatActivity() {
     }
 
     private fun setUpViews() {
+        binding.viewPager.offscreenPageLimit = 8
         binding.btnNext.setOnClickListener {
             val current = binding.viewPager.currentItem + 1
             if (current < MAX_QUESTIONS) {
