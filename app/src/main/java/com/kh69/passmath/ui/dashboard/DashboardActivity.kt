@@ -17,6 +17,7 @@ import com.kh69.passmath.Tools2
 import com.kh69.passmath.Tools2.setSystemBarColor
 import com.kh69.passmath.Tools2.setSystemBarLight
 import com.kh69.passmath.extensions.launchSettings
+import com.kh69.passmath.extensions.rateApp
 import com.kh69.passmath.getViewModel
 import com.kh69.passmath.ui.questionCards.QuestionCards
 
@@ -95,7 +96,10 @@ class DashboardActivity : AppCompatActivity() {
         when (tab.position) {
             0 -> Toast.makeText(applicationContext, "Home", Toast.LENGTH_SHORT).show()
             1 -> Toast.makeText(applicationContext, "Statistics", Toast.LENGTH_SHORT).show()
-            2 -> Toast.makeText(applicationContext, "Communication", Toast.LENGTH_SHORT).show()
+            2 -> {
+                Toast.makeText(applicationContext, "Communication", Toast.LENGTH_SHORT).show()
+                rateApp()
+            }
             3 -> {
                 Toast.makeText(applicationContext, "Settings", Toast.LENGTH_SHORT).show()
                 launchSettings()
