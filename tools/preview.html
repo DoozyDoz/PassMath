@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PassMath — KaTeX preview</title>
+<!-- Same KaTeX the app's WebView uses. CDN is fine for this dev-only review tool. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<style>
+  /* Force a high-contrast light theme so the review tool is always readable,
+     regardless of the OS/browser dark-mode setting. */
+  html { color-scheme: light; }
+  body { margin: 0; font: 16px/1.5 -apple-system, Segoe UI, Roboto, sans-serif;
+         padding: 16px; background: #ffffff; color: #111; }
+  header { position: sticky; top: 0; background: #ffffff; padding: 8px 12px;
+           border-bottom: 1px solid #ccc; z-index: 10; color: #111; }
+  header input[type=file] { font: inherit; }
+  .group { margin: 24px 0; }
+  .group h2 { font-size: 18px; margin: 12px 0 4px; color: #111; }
+  .q { border: 1px solid #ddd; border-radius: 8px; padding: 12px 14px; margin: 10px 0;
+       background: #fafafa; color: #111; }
+  .q .meta { font-size: 12px; color: #555; font-family: monospace; margin-bottom: 6px; }
+  /* Each logical line of a question is its own block (see structureBody in the script
+     below), mirroring the app's KatexView (ADR-0005). Structural boundaries get a top
+     margin; roman siblings stay tight; part labels are bold. */
+  .q .body { word-wrap: break-word; overflow-wrap: anywhere;
+             color: #111; line-height: 1.6; }
+  .q .body .line { margin: 0; }
+  .q .body .line.boundary { margin-top: 0.6em; }
+  .q .body .line.first { margin-top: 0; }
+  .q .body .line .lbl { font-weight: 700; }
+  .q .body .katex-display { overflow-x: auto; margin: 0.6em 0; }
+  .q details { margin-top: 8px; }
+  .q details pre { white-space: pre-wrap; word-break: break-word; font-size: 12px;
+                   background: #eee; color: #111; padding: 8px; border-radius: 4px; }
+  .flagged { border-color: #e63946; }
+  button.flag { font: inherit; margin-left: 8px; cursor: pointer; }
+  .err { color: #e63946; }
+</style>
+</head>
+<body>
+<header>
+  <strong>PassMath KaTeX preview</strong>
+  &nbsp; load JSON: <input type="file" id="file" accept=".json">
+  <span id="status"></span>
+</header>
+<main id="out"><p>Load <code>questions_1993_2015.json</code> to render.</p></main>
+
+<script>
+const out = document.getElementById('out');
+const status = document.getElementById('status');
+const flagged = new Set();
+
+document.getElementById('file').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  status.textContent = ' reading…';
+  try {
+    const text = await f.text();
+    const qs = JSON.parse(text);
+    render(qs);
+    status.textContent = ` ${qs.length} questions loaded`;
+  } catch (err) {
+    status.innerHTML = '<span class="err"> ' + err + '</span>';
+  }
+});
+
+// --- Renderer-side structural inference (mirrors KatexView; see ADR-0005) ---
+// Turns a raw katex_question string into block-per-line HTML: $$…$$ display math kept
+// whole, prose split on \n, each line classified by its leading label. Boundaries get a
+// gap; roman siblings stay tight; the label token is bolded.
+const LABEL = /^\s*(\d+\.[a-z]\)|\d+\.|[a-z]\)|\(?[ivxIVX]+\)|\([a-z]\)|\(?[Aa]ns:|Ans:)/;
+const ROMAN_PAREN = /^\(?[ivxIVX]+\)$/;
+const LETTER_PAREN = /^\([a-z]\)$/;
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function isBoundaryLabel(label) {
+  const s = label.trim();
+  if (s.endsWith(')')) {
+    if (ROMAN_PAREN.test(s)) return false;   // i) / (ii) … tight siblings
+    if (LETTER_PAREN.test(s)) return false;  // (a) … treat as a sibling too
+  }
+  return true;
+}
+
+// Split body into [{text, isDisplay}] keeping $$…$$ whole (its internal \n are LaTeX row
+// breaks, not paragraph breaks).
+function tokenizeDisplayMath(body) {
+  const segs = [];
+  let i = 0, prose = '';
+  while (i < body.length) {
+    if (body[i] === '$' && body[i + 1] === '$') {
+      if (prose) { segs.push({text: prose, isDisplay: false}); prose = ''; }
+      const end = body.indexOf('$$', i + 2);
+      if (end < 0) { prose += body.slice(i); i = body.length; }
+      else { segs.push({text: body.slice(i, end + 2), isDisplay: true}); i = end + 2; }
+    } else {
+      prose += body[i]; i++;
+    }
+  }
+  if (prose) segs.push({text: prose, isDisplay: false});
+  return segs;
+}
+
+function structureBody(body) {
+  if (!body || !body.trim()) return '';
+  let out = '';
+  let first = true;
+  for (const seg of tokenizeDisplayMath(body)) {
+    if (seg.isDisplay) {
+      out += `<div class="line boundary${first ? ' first' : ''}">${escapeHtml(seg.text)}</div>`;
+      first = false;
+      continue;
+    }
+    for (let raw of seg.text.split('\n')) {
+      const line = raw.replace(/\s+$/g, '');
+      if (!line.trim()) continue;
+      const m = line.match(LABEL);
+      const label = m ? m[0] : null;
+      const rest = label ? line.slice(m.index + label.length) : line;
+      let cls = 'line';
+      if (first) cls = 'line first';
+      else if (label && isBoundaryLabel(label)) cls = 'line boundary';
+      const lbl = label ? `<span class="lbl">${escapeHtml(label)}</span>` : '';
+      out += `<div class="${cls}">${lbl}${escapeHtml(rest)}</div>`;
+      first = false;
+    }
+  }
+  return out;
+}
+
+function render(qs) {
+  // Group by year + paper, preserving file order.
+  const groups = new Map();
+  for (const q of qs) {
+    const key = `${q.year} — Paper ${q.paper}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(q);
+  }
+  out.innerHTML = '';
+  for (const [key, list] of groups) {
+    const g = document.createElement('div'); g.className = 'group';
+    const h = document.createElement('h2'); h.textContent = key; g.appendChild(h);
+    for (const q of list) {
+      const card = document.createElement('div'); card.className = 'q';
+      const meta = document.createElement('div'); meta.className = 'meta';
+      meta.textContent = `${q._id}  ·  section=${q.section ?? '—'}  ·  topic=${q.topic ?? '—'}`;
+      card.appendChild(meta);
+
+      const body = document.createElement('div'); body.className = 'body';
+      body.innerHTML = structureBody(q.katex_question || '(empty)');
+      card.appendChild(body);
+
+      const det = document.createElement('details');
+      const sum = document.createElement('summary'); sum.textContent = 'raw katex_question';
+      const pre = document.createElement('pre'); pre.textContent = q.katex_question || '';
+      det.appendChild(sum); det.appendChild(pre);
+      card.appendChild(det);
+
+      const flag = document.createElement('button'); flag.className = 'flag';
+      flag.textContent = 'flag';
+      flag.onclick = () => {
+        if (flagged.has(q._id)) { flagged.delete(q._id); card.classList.remove('flagged'); flag.textContent='flag'; }
+        else { flagged.add(q._id); card.classList.add('flagged'); flag.textContent='flagged ✓'; }
+        console.log('flagged:', [...flagged]);
+      };
+      card.appendChild(flag);
+
+      g.appendChild(card);
+    }
+    out.appendChild(g);
+  }
+  // Render math now that DOM is built.
+  renderMathInElement(out, {
+    delimiters: [
+      {left: "$$", right: "$$", display: true},
+      {left: "$", right: "$", display: false},
+    ],
+    throwOnError: false,
+  });
+}
+</script>
+</body>
+</html>
