@@ -13,12 +13,11 @@ import androidx.viewpager.widget.PagerAdapter;
 
 import com.kh69.passmath.R;
 import com.kh69.passmath.data.Question;
+import com.kh69.passmath.ui.katex.KatexView;
 import com.kh69.passmath.ui.questionCards.QuestionCards;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import katex.hourglass.in.mathlib.MathView;
 
 public class MyViewPagerAdapter extends PagerAdapter {
 
@@ -38,13 +37,13 @@ public class MyViewPagerAdapter extends PagerAdapter {
         layoutInflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 
         View            view             = layoutInflater.inflate(R.layout.item_card_question, container, false);
-        MathView        questionView     = view.findViewById(R.id.kv_question);
-        MathView        answerView       = view.findViewById(R.id.kv_answer);
+        KatexView       questionView     = view.findViewById(R.id.kv_question);
+        KatexView       answerView       = view.findViewById(R.id.kv_answer);
         ImageButton     showAnswerButton = view.findViewById(R.id.show_answer);
         ImageView       blurryImageView  = view.findViewById(R.id.image_to_blur);
         final boolean[] answerIsVisible  = {false};
 
-        removeZoomControls(new MathView[]{questionView, answerView});
+        removeZoomControls(new KatexView[]{questionView, answerView});
         questionView.setDisplayText(question.getKatex_question());
         answerView.setDisplayText(question.getKatex_answer());
 
@@ -79,8 +78,8 @@ public class MyViewPagerAdapter extends PagerAdapter {
         }
     }
 
-    private void removeZoomControls(MathView[] mathViews) {
-        for (MathView mathView : mathViews) {
+    private void removeZoomControls(KatexView[] mathViews) {
+        for (KatexView mathView : mathViews) {
             mathView.getSettings().setBuiltInZoomControls(true);
             mathView.getSettings().setDisplayZoomControls(false);
         }

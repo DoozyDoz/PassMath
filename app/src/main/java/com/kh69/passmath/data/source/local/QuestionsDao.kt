@@ -18,6 +18,20 @@ interface QuestionsDao {
     fun observeQuestions(): LiveData<List<Question>>
 
     /**
+     * Observes the questions of a single paper, in bank order. Drives the per-paper card
+     * stepper (see ADR-0005 / the dashboard paper selector).
+     */
+    @Query("SELECT * FROM Questions WHERE year = :year AND paper = :paper ORDER BY questionId")
+    fun observeQuestionsByYearAndPaper(year: Int, paper: Int): LiveData<List<Question>>
+
+    /**
+     * Observes every distinct (year, paper) actually present in the DB, ordered. Drives the
+     * dashboard paper selector so the list only ever offers papers that were seeded.
+     */
+    @Query("SELECT DISTINCT year, paper FROM Questions ORDER BY year, paper")
+    fun observeDistinctPapers(): LiveData<List<PaperYear>>
+
+    /**
      * Observes a single question.
      *
      * @param questionId the question id.
@@ -33,6 +47,13 @@ interface QuestionsDao {
      */
     @Query("SELECT * FROM Questions")
     suspend fun getQuestions(): List<Question>
+
+    /**
+     * Number of questions in the table. Used to gate one-time seeding from the bundled
+     * JSON asset (offline-first; see ADR-0002).
+     */
+    @Query("SELECT COUNT(*) FROM Questions")
+    fun count(): Int
 
     /**
      * Select a question by id.

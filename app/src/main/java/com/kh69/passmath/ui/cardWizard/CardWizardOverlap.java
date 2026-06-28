@@ -23,7 +23,7 @@ import com.kh69.passmath.data.model.QuizState;
 import java.util.ArrayList;
 import java.util.List;
 
-import katex.hourglass.in.mathlib.MathView;
+import com.kh69.passmath.ui.katex.KatexView;
 
 
 public class CardWizardOverlap extends AppCompatActivity {
@@ -173,7 +173,7 @@ public class CardWizardOverlap extends AppCompatActivity {
             layoutInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 
             View view = layoutInflater.inflate(R.layout.item_card_question, container, false);
-            ((MathView) view.findViewById(R.id.kv_question)).setDisplayText(question.getKatex_question());
+            ((KatexView) view.findViewById(R.id.kv_question)).setDisplayText(question.getKatex_question());
             ((TextView) view.findViewById(R.id.title)).setText(about_title_array[position]);
             ((TextView) view.findViewById(R.id.description)).setText(about_description_array[position]);
 

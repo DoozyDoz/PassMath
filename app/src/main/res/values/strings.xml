@@ -139,6 +139,9 @@
     <string name="BACK">BACK</string>
     <string name="SKIP">SKIP</string>
     <string name="question_of">Question %1$d of %2$d</string>
+    <string name="text_select_paper">Select a paper</string>
+    <string name="text_loading_papers">Loading papers…</string>
+    <string name="paper_label">%1$d — Paper %2$d</string>
     <string name="a_level">A LEVEL</string>
     <string name="o_level">O LEVEL</string>
     <string name="google_maps_key" templateMergeStrategy="preserve" translatable="false">

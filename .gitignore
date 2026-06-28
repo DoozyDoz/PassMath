@@ -68,3 +68,12 @@ fastlane/readme.md
 
 # keystore props
 keystore.properties
+
+# Conversion pipeline scratch (page PNGs, per-page MMD cache, concatenated MMD).
+# Only the generated questions JSON asset is committed. API key lives in env vars, never here.
+tools/ocr_out/
+
+# Python
+__pycache__/
+*.pyc
+.venv/

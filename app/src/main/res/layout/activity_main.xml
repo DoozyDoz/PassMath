@@ -7,14 +7,13 @@
     tools:context=".ui.main.MainActivity">
 
 
-    <katex.hourglass.in.mathlib.MathView
+    <com.kh69.passmath.ui.katex.KatexView
         android:id="@+id/mathView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:setTextColor="@color/white"/>
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -7,7 +7,7 @@ import android.view.View.VISIBLE
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.kh69.passmath.data.Question
-import katex.hourglass.`in`.mathlib.MathView
+import com.kh69.passmath.ui.katex.KatexView
 
 class QuestionAdapter(private val mList: List<Question>) : RecyclerView.Adapter<QuestionAdapter.ViewHolder>() {
 
@@ -39,8 +39,8 @@ class QuestionAdapter(private val mList: List<Question>) : RecyclerView.Adapter<
 
     // Holds the views for adding it to image and text
     class ViewHolder(ItemView: View) : RecyclerView.ViewHolder(ItemView) {
-        val kv_question: MathView = itemView.findViewById(R.id.kv_question)
-        val kv_answer: MathView = itemView.findViewById(R.id.kv_answer)
+        val kv_question: KatexView = itemView.findViewById(R.id.kv_question)
+        val kv_answer: KatexView = itemView.findViewById(R.id.kv_answer)
         val btn_show: View = itemView.findViewById(R.id.btn_show)
 
     }

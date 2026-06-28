@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.annotation.VisibleForTesting
 import androidx.room.Room
 import com.kh69.passmath.data.source.QtnRepository
+import com.kh69.passmath.data.source.local.DatabaseSeeder
 import com.kh69.passmath.data.source.local.MathDatabase
 
 /**
@@ -24,10 +25,13 @@ object ServiceLocator {
     }
 
     private fun createQuestionsRepository(context: Context): QtnRepository {
+        val appContext = context.applicationContext
+        val db = database ?: createDataBase(appContext)
         val newRepo = QtnRepository(
             AppExecutors(),
-            db = database ?: createDataBase(context),
-            dao = (database ?: createDataBase(context)).questionDao(),
+            db = db,
+            dao = db.questionDao(),
+            seeder = DatabaseSeeder(appContext),
 //            service = APIUtils.getMathService()
         )
         questionsRepository = newRepo

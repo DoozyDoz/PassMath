@@ -17,28 +17,35 @@ import com.kh69.passmath.data.Question
 import com.kh69.passmath.data.model.QuizState
 import com.kh69.passmath.databinding.ActivityCardWizardOverlapBinding
 import com.kh69.passmath.getViewModel
+import com.kh69.passmath.ui.katex.KatexView
 import com.kh69.passmath.util.ViewAnimation
-import katex.hourglass.`in`.mathlib.MathView
 import kotlinx.android.synthetic.main.activity_stepper_text.*
 import kotlinx.android.synthetic.main.item_card_question.*
 
 class QuestionCards : AppCompatActivity() {
 
     companion object {
-        const val MAX_QUESTIONS = 4
+        const val EXTRA_YEAR = "extra_year"
+        const val EXTRA_PAPER = "extra_paper"
     }
 
     private var currentQtn = 1
     val answerIsVisible = booleanArrayOf(false)
 
+    /** Number of questions in the selected paper; 0 until the filtered query returns. */
+    private var maxQuestions = 0
 
-    private lateinit var binding: ActivityCardWizardOverlapBinding
     private lateinit var questions: ArrayList<Question>
+
+    private val year: Int by lazy { intent.getIntExtra(EXTRA_YEAR, -1) }
+    private val paper: Int by lazy { intent.getIntExtra(EXTRA_PAPER, -1) }
 
     private val viewModel: QuestionCardsViewModel by lazy {
         getViewModel {
             QuestionCardsViewModel(
-                MathApp.getContext().questionRepository
+                MathApp.getContext().questionRepository,
+                year,
+                paper
             )
         }
     }
@@ -48,10 +55,6 @@ class QuestionCards : AppCompatActivity() {
         setContentView(R.layout.activity_stepper_text)
 
         initToolbar()
-
-//        binding = ActivityCardWizardOverlapBinding.inflate(layoutInflater)
-//        setContentView(binding.root)
-
         setUpViews()
         getQuestions()
     }
@@ -68,66 +71,33 @@ class QuestionCards : AppCompatActivity() {
     private fun setUpViews() {
         lyt_back.setOnClickListener { backStep(currentQtn) }
         lyt_next.setOnClickListener { nextStep(currentQtn) }
-        val str_progress =
-            String.format(getString(R.string.question_of), currentQtn, MAX_QUESTIONS)
+        updateProgressText()
+    }
 
-        tv_steps.text = str_progress
-        status.text = str_progress
-
-        bottomProgressDots(0)
-
+    private fun updateProgressText() {
+        val str = String.format(getString(R.string.question_of), currentQtn, maxQuestions)
+        tv_steps.text = str
+        status.text = str
     }
 
     private fun nextStep(progress: Int) {
-        var progress = progress
-        if (progress < MAX_QUESTIONS) {
-            progress++
-            currentQtn = progress
+        if (maxQuestions == 0) return
+        if (progress < maxQuestions) {
+            currentQtn = progress + 1
             ViewAnimation.fadeOutIn(status)
         }
         populateCard(currentQtn)
-        val str_progress =
-            String.format(getString(R.string.question_of), currentQtn, MAX_QUESTIONS)
-        (findViewById<View>(R.id.tv_steps) as TextView).text = str_progress
-        status.text = str_progress
+        updateProgressText()
     }
 
     private fun backStep(progress: Int) {
-        var progress = progress
+        if (maxQuestions == 0) return
         if (progress > 1) {
-            progress--
-            currentQtn = progress
+            currentQtn = progress - 1
             ViewAnimation.fadeOutIn(status)
         }
         populateCard(currentQtn)
-        val str_progress =
-            String.format(getString(R.string.question_of), currentQtn, MAX_QUESTIONS)
-        (findViewById<View>(R.id.tv_steps) as TextView).text = str_progress
-        status.text = str_progress
-    }
-
-    private fun bottomProgressDots(current_index: Int) {
-        val dots = arrayOfNulls<ImageView>(MAX_QUESTIONS)
-//        binding.layoutDots.removeAllViews()
-
-        for (i in dots.indices) {
-            dots[i] = ImageView(this)
-            val width_height = 15
-            val params =
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams(width_height, width_height))
-            params.setMargins(10, 10, 10, 10)
-            dots[i]!!.layoutParams = params
-            dots[i]!!.setImageResource(R.drawable.shape_circle)
-            dots[i]!!.setColorFilter(resources.getColor(R.color.grey_20), PorterDuff.Mode.SRC_IN)
-//            binding.layoutDots.addView(dots[i])
-        }
-        if (dots.isNotEmpty()) {
-            dots[current_index]!!.setImageResource(R.drawable.shape_circle)
-            dots[current_index]!!.setColorFilter(
-                resources.getColor(R.color.light_green_600),
-                PorterDuff.Mode.SRC_IN
-            );
-        }
+        updateProgressText()
     }
 
     private fun prepopulateQuestions() = viewModel.questions
@@ -154,10 +124,17 @@ class QuestionCards : AppCompatActivity() {
 
     private fun renderDataState(quizState: QuizState.DataState) {
         questions = quizState.data as ArrayList<Question>
-//        binding.viewPager.adapter = MyViewPagerAdapter(quizState.data as ArrayList<Question>, this)
+        maxQuestions = questions.size
+        currentQtn = 1
+        // Populate the first card now that data has arrived, so the screen is not blank on
+        // entry (the original bug). Next/back then step through this paper's questions.
+        populateCard(currentQtn)
+        updateProgressText()
     }
 
     private fun populateCard(index: Int) {
+        if (!::questions.isInitialized || questions.isEmpty()) return
+        if (currentQtn < 1 || currentQtn > questions.size) return
         val current_question = questions[currentQtn - 1]
         removeZoomControls(arrayOf(kv_question, kv_answer))
         kv_question.setDisplayText(current_question.katex_question)
@@ -172,7 +149,7 @@ class QuestionCards : AppCompatActivity() {
         }
     }
 
-    private fun removeZoomControls(mathViews: Array<MathView>) {
+    private fun removeZoomControls(mathViews: Array<KatexView>) {
         for (mathView in mathViews) {
             mathView.settings.builtInZoomControls = true
             mathView.settings.displayZoomControls = false

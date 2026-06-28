@@ -103,7 +103,7 @@
                             android:layout_height="@dimen/spacing_xxlarge"
                             android:foreground="@color/overlay_light_20"
                             app:civ_shadow="true"
-                            app:civ_shadow_radius="0"
+                            app:civ_shadow_radius="0dp"
                             app:civ_border="false" />
 
                         <View
@@ -274,7 +274,7 @@
                             android:layout_height="@dimen/spacing_xxlarge"
                             android:foreground="@color/overlay_light_20"
                             app:civ_shadow="true"
-                            app:civ_shadow_radius="0"
+                            app:civ_shadow_radius="0dp"
                             app:civ_border="false" />
 
                         <View
@@ -450,7 +450,7 @@
                             android:layout_height="@dimen/spacing_xxlarge"
                             android:foreground="@color/overlay_light_20"
                             app:civ_shadow="true"
-                            app:civ_shadow_radius="0"
+                            app:civ_shadow_radius="0dp"
                             app:civ_border="false" />
 
                         <View

@@ -8,14 +8,17 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.NestedScrollView
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayout.OnTabSelectedListener
+import com.kh69.passmath.MathApp
 import com.kh69.passmath.R
 import com.kh69.passmath.Tools2
 import com.kh69.passmath.Tools2.setSystemBarColor
 import com.kh69.passmath.Tools2.setSystemBarLight
+import com.kh69.passmath.data.source.local.PaperYear
 import com.kh69.passmath.extensions.launchSettings
 import com.kh69.passmath.extensions.rateApp
 import com.kh69.passmath.getViewModel
@@ -26,10 +29,12 @@ class DashboardActivity : AppCompatActivity() {
     private var nested_scroll_view: NestedScrollView? = null
     private var card_form_6: LinearLayout? = null
 
+    /** The distinct papers currently seeded in the DB; updated by [viewModel].papers. */
+    private var papers: List<PaperYear> = emptyList()
+
     private val viewModel: DashboardViewModel by lazy {
         getViewModel {
-            DashboardViewModel(
-            )
+            DashboardViewModel(MathApp.getContext().questionRepository)
         }
     }
 
@@ -37,6 +42,15 @@ class DashboardActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dashboard)
         initComponent()
+        observePapers()
+    }
+
+    private fun observePapers() {
+        // The list populates once the first-launch seeding (kicked off in MathApp.onCreate)
+        // writes rows. Until then papers stays empty and the selector shows a "loading" toast.
+        viewModel.papers.observe(this) { loaded ->
+            papers = loaded ?: emptyList()
+        }
     }
 
     private fun initComponent() {
@@ -45,14 +59,7 @@ class DashboardActivity : AppCompatActivity() {
 
         card_form_6 = findViewById(R.id.card_form_6)
 
-        card_form_6?.setOnClickListener { view: View? ->
-            startActivity(
-                Intent(
-                    this,
-                    QuestionCards::class.java
-                )
-            )
-        }
+        card_form_6?.setOnClickListener { showPaperSelector() }
         tab_layout?.let {
             it.addTab(it.newTab().setIcon(R.drawable.ic_home), 0)
             it.addTab(it.newTab().setIcon(R.drawable.ic_data_usage), 1)
@@ -107,7 +114,36 @@ class DashboardActivity : AppCompatActivity() {
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+    /**
+     * The "Form 6" entry card opens a chooser listing every paper actually seeded in the DB.
+     * Picking one launches the per-paper card stepper ([QuestionCards]) with the year + paper
+     * as intent extras. If the DB has not finished seeding yet, we tell the user to wait.
+     */
+    private fun showPaperSelector() {
+        if (papers.isEmpty()) {
+            Toast.makeText(this, R.string.text_loading_papers, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val labels = papers.map { getString(R.string.paper_label, it.year, it.paper) }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.text_select_paper)
+            .setItems(labels) { _, which ->
+                val picked = papers[which]
+                startActivity(
+                    Intent(this, QuestionCards::class.java)
+                        .putExtra(EXTRA_YEAR, picked.year)
+                        .putExtra(EXTRA_PAPER, picked.paper)
+                )
+            }
+            .show()
+    }
+
+    companion object {
+        const val EXTRA_YEAR = "extra_year"
+        const val EXTRA_PAPER = "extra_paper"
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_search_setting, menu)
         Tools2.changeMenuIconColor(menu, resources.getColor(R.color.grey_60))
         return true

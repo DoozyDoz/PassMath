@@ -14,7 +14,7 @@ import com.kh69.passmath.R.color
 import com.kh69.passmath.data.Question
 import com.kh69.passmath.data.Resource
 import com.kh69.passmath.data.source.QtnRepository
-import com.kh69.passmath.data.source.QuestionsRepository
+import com.kh69.passmath.data.source.local.PaperYear
 import com.kh69.passmath.extensions.launchSettings
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -22,7 +22,10 @@ import kotlinx.coroutines.withContext
 /**
  * ViewModel for the Dashboard screen.
  */
-class DashboardViewModel : ViewModel() {
+class DashboardViewModel(private val repository: QtnRepository) : ViewModel() {
+
+    /** Every (year, paper) actually seeded in the DB, for the paper selector dialog. */
+    val papers: LiveData<List<PaperYear>> = repository.distinctPapers()
 
     private val _snackbarText = MutableLiveData<Event<Int>>()
     val snackbarText: LiveData<Event<Int>> = _snackbarText

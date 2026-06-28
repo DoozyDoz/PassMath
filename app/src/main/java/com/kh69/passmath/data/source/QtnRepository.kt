@@ -1,10 +1,13 @@
 package com.kh69.passmath.data.source
 
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
 import com.kh69.passmath.AppExecutors
 import com.kh69.passmath.data.Question
 import com.kh69.passmath.data.Resource
+import com.kh69.passmath.data.source.local.DatabaseSeeder
 import com.kh69.passmath.data.source.local.MathDatabase
+import com.kh69.passmath.data.source.local.PaperYear
 import com.kh69.passmath.data.source.local.QuestionsDao
 import com.kh69.passmath.data.source.remote.APIUtils
 import com.kh69.passmath.data.source.remote.MathService
@@ -20,24 +23,48 @@ class QtnRepository constructor(
     private val appExecutors: AppExecutors,
     private val db: MathDatabase,
     private val dao: QuestionsDao,
+    private val seeder: DatabaseSeeder,
     private val service: MathService = APIUtils.getMathService()
 ) {
 
+    /**
+     * Offline-first: observe the DB and, if it is empty on first launch, seed it from the
+     * bundled JSON asset instead of calling the (dead) Heroku backend. See ADR-0002.
+     */
     fun getQuestions(): LiveData<Resource<List<Question>>> {
-        return object : NetworkBoundResource<List<Question>, List<Question>>(appExecutors) {
-            override fun saveCallResult(item: List<Question>) {
-                dao.insertQuestions(item)
-            }
+        val result = MediatorLiveData<Resource<List<Question>>>()
+        result.value = Resource.loading(null)
 
-            override fun shouldFetch(data: List<Question>?): Boolean {
-                return data == null || data.isEmpty()
-            }
+        appExecutors.diskIO().execute { seeder.seedIfEmpty(dao) }
 
-            override fun loadFromDb() = dao.observeQuestions()
+        result.addSource(dao.observeQuestions()) { questions ->
+            result.setValue(Resource.success(questions))
+        }
+        return result
+    }
 
-            override fun createCall() = service.getQuestions()
+    /**
+     * Same as [getQuestions] but scoped to one paper, for the per-paper card stepper. Seeds
+     * first (so the DB is populated on first launch) then observes just that paper's rows.
+     */
+    fun getQuestions(year: Int, paper: Int): LiveData<Resource<List<Question>>> {
+        val result = MediatorLiveData<Resource<List<Question>>>()
+        result.value = Resource.loading(null)
 
-        }.asLiveData()
+        appExecutors.diskIO().execute { seeder.seedIfEmpty(dao) }
+
+        result.addSource(dao.observeQuestionsByYearAndPaper(year, paper)) { questions ->
+            result.setValue(Resource.success(questions))
+        }
+        return result
+    }
+
+    /** Every distinct (year, paper) in the DB, for the dashboard paper selector. */
+    fun distinctPapers(): LiveData<List<PaperYear>> = dao.observeDistinctPapers()
+
+    /** Kick off one-time seeding from the bundled JSON asset (idempotent; no-op if filled). */
+    fun seed() {
+        appExecutors.diskIO().execute { seeder.seedIfEmpty(dao) }
     }
 
     fun getQuestion(id: String): LiveData<Resource<Question>> {

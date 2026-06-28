@@ -21,5 +21,10 @@ class MathApp : Application() {
         super.onCreate()
         instance = this
 
+        // Offline-first (ADR-0002): seed the Room DB from the bundled JSON asset on first
+        // launch, before any screen queries it. Idempotent — a no-op once the table is
+        // filled. Runs on the diskIO executor so the main thread is never blocked; the
+        // dashboard's paper list (a LiveData over the questions table) fills in once seeded.
+        questionRepository.seed()
     }
 }

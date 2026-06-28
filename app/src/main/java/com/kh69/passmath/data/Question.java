@@ -3,6 +3,7 @@ package com.kh69.passmath.data;
 import androidx.annotation.NonNull;
 import androidx.room.ColumnInfo;
 import androidx.room.Entity;
+import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
 import com.google.gson.annotations.Expose;
@@ -53,6 +54,15 @@ public class Question {
     @SerializedName("edited")
     @Expose
     private boolean edited;
+
+    /**
+     * No-arg constructor for Gson deserialization (the bundled JSON asset is parsed into
+     * Question objects on first launch). Annotated {@link Ignore} so Room keeps using the
+     * full-field constructor below.
+     */
+    @Ignore
+    public Question() {
+    }
 
     public Question(String text, int year, int paper, String section, String topic, String answer, String katex_question, String katex_answer, boolean edited) {
         this.text           = text;
